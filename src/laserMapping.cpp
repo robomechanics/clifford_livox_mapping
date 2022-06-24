@@ -53,9 +53,12 @@ typedef pcl::PointXYZI PointType;
 
 int kfNum = 0;
 
-float timeLaserCloudCornerLast = 0;
-float timeLaserCloudSurfLast = 0;
-float timeLaserCloudFullRes = 0;
+//float timeLaserCloudCornerLast = 0;
+ros::Time timeLaserCloudCornerLast = ros::Time(0.);
+//float timeLaserCloudSurfLast = 0;
+ros::Time timeLaserCloudSurfLast = ros::Time(0.);
+//float timeLaserCloudFullRes = 0;
+ros::Time timeLaserCloudFullRes = ros::Time(0.);
 
 bool newLaserCloudCornerLast = false;
 bool newLaserCloudSurfLast = false;
@@ -349,17 +352,24 @@ void pointAssociateTobeMapped(PointType const * const pi, PointType * const po)
 
 void laserCloudCornerLastHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudCornerLast2)
 {
-    timeLaserCloudCornerLast = laserCloudCornerLast2->header.stamp.toSec();
+//    timeLaserCloudCornerLast = laserCloudCornerLast2->header.stamp.toSec();
+    timeLaserCloudCornerLast = laserCloudCornerLast2->header.stamp;
+
+    std::cout << "HANDLER TIME 1: " << laserCloudCornerLast2->header.stamp << std::endl;
+    std::cout << "HANDLER TIME 2: " << timeLaserCloudCornerLast << std::endl;
 
     laserCloudCornerLast->clear();
     pcl::fromROSMsg(*laserCloudCornerLast2, *laserCloudCornerLast);
 
     newLaserCloudCornerLast = true;
+
+    std::cout << "DONE" << std::endl;
 }
 
 void laserCloudSurfLastHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudSurfLast2)
 {
-    timeLaserCloudSurfLast = laserCloudSurfLast2->header.stamp.toSec();
+    timeLaserCloudSurfLast = laserCloudSurfLast2->header.stamp;
+//    timeLaserCloudSurfLast = laserCloudSurfLast2->header.stamp.toSec();
 
     laserCloudSurfLast->clear();
     pcl::fromROSMsg(*laserCloudSurfLast2, *laserCloudSurfLast);
@@ -369,7 +379,7 @@ void laserCloudSurfLastHandler(const sensor_msgs::PointCloud2ConstPtr& laserClou
 
 void laserCloudFullResHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudFullRes2)
 {
-    timeLaserCloudFullRes = laserCloudFullRes2->header.stamp.toSec();
+    timeLaserCloudFullRes = laserCloudFullRes2->header.stamp;
 
     laserCloudFullRes->clear();
     laserCloudFullResColor->clear();
@@ -451,8 +461,8 @@ int main(int argc, char** argv)
         ros::spinOnce();
 
         if (newLaserCloudCornerLast && newLaserCloudSurfLast && newLaserCloudFullRes &&
-                fabs(timeLaserCloudSurfLast - timeLaserCloudCornerLast) < 0.005 &&
-                fabs(timeLaserCloudFullRes - timeLaserCloudCornerLast) < 0.005) {
+                fabs((timeLaserCloudSurfLast - timeLaserCloudCornerLast).toSec()) < 0.005 &&
+                fabs((timeLaserCloudFullRes - timeLaserCloudCornerLast).toSec()) < 0.005) {
 
             clock_t t1,t2,t3,t4;
 
@@ -1116,13 +1126,15 @@ int main(int argc, char** argv)
 
             sensor_msgs::PointCloud2 laserCloudSurround3;
             pcl::toROSMsg(*laserCloudSurround2, laserCloudSurround3);
-            laserCloudSurround3.header.stamp = ros::Time().fromSec(timeLaserCloudCornerLast);
+            laserCloudSurround3.header.stamp = timeLaserCloudCornerLast;
+//            laserCloudSurround3.header.stamp = ros::Time().fromSec(timeLaserCloudCornerLast);
             laserCloudSurround3.header.frame_id = "camera_init";
             pubLaserCloudSurround.publish(laserCloudSurround3);
 
             sensor_msgs::PointCloud2 laserCloudSurround3_corner;
             pcl::toROSMsg(*laserCloudSurround2_corner, laserCloudSurround3_corner);
-            laserCloudSurround3_corner.header.stamp = ros::Time().fromSec(timeLaserCloudCornerLast);
+            laserCloudSurround3_corner.header.stamp = timeLaserCloudCornerLast;
+//            laserCloudSurround3_corner.header.stamp = ros::Time().fromSec(timeLaserCloudCornerLast);
             laserCloudSurround3_corner.header.frame_id = "camera_init";
             pubLaserCloudSurround_corner.publish(laserCloudSurround3_corner);
             
@@ -1140,7 +1152,8 @@ int main(int argc, char** argv)
 
             sensor_msgs::PointCloud2 laserCloudFullRes3;
             pcl::toROSMsg(*laserCloudFullResColor, laserCloudFullRes3);
-            laserCloudFullRes3.header.stamp = ros::Time().fromSec(timeLaserCloudCornerLast);
+            laserCloudFullRes3.header.stamp = timeLaserCloudCornerLast;
+//            laserCloudFullRes3.header.stamp = ros::Time().fromSec(timeLaserCloudCornerLast);
             laserCloudFullRes3.header.frame_id = "camera_init";
             pubLaserCloudFullRes.publish(laserCloudFullRes3);
 
@@ -1149,7 +1162,8 @@ int main(int argc, char** argv)
             geometry_msgs::Quaternion geoQuat = tf::createQuaternionMsgFromRollPitchYaw
                     (transformAftMapped[2], - transformAftMapped[0], - transformAftMapped[1]);
 
-            odomAftMapped.header.stamp = ros::Time().fromSec(timeLaserCloudCornerLast);
+            odomAftMapped.header.stamp = timeLaserCloudCornerLast;
+//            odomAftMapped.header.stamp = ros::Time().fromSec(timeLaserCloudCornerLast);
             odomAftMapped.pose.pose.orientation.x = -geoQuat.y;
             odomAftMapped.pose.pose.orientation.y = -geoQuat.z;
             odomAftMapped.pose.pose.orientation.z = geoQuat.x;
@@ -1171,6 +1185,9 @@ int main(int argc, char** argv)
             q.setY( odomAftMapped.pose.pose.orientation.y );
             q.setZ( odomAftMapped.pose.pose.orientation.z );
             transform.setRotation( q );
+
+	    std::cout << odomAftMapped.header.stamp << std::endl;
+
             br.sendTransform( tf::StampedTransform( transform, odomAftMapped.header.stamp, "camera_init", "aft_mapped" ) );
 
             kfNum++;
